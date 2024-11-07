@@ -6,10 +6,10 @@ local qrcode = ADDONSELF.qrcode
 local BLOCK_SIZE = 10
 
 local function CreateQRTip(qrsize)
-    local f = CreateFrame("Frame", nil, UIParent)
+    local f = CreateFrame("Frame", nil, UIParent, BackdropTemplateMixin and "BackdropTemplate")
 
     local function CreateBlock(idx)
-        local t = CreateFrame("Frame", nil, f)
+        local t = CreateFrame("Frame", nil, f, BackdropTemplateMixin and "BackdropTemplate")
 
         t:SetWidth(BLOCK_SIZE)
         t:SetHeight(BLOCK_SIZE)
@@ -19,39 +19,21 @@ local function CreateQRTip(qrsize)
         local x = (idx % qrsize) * BLOCK_SIZE
         local y = (math.floor(idx / qrsize)) * BLOCK_SIZE
 
-        t:SetPoint("TOPLEFT", f, 20 + x, - 20 - y);
+        t:SetPoint("TOPLEFT", f, x, -y);
 
         return t
     end
-
-
+    
     do
         f:SetFrameStrata("BACKGROUND")
-        f:SetWidth(qrsize * BLOCK_SIZE + 40)
-        f:SetHeight(qrsize * BLOCK_SIZE + 40)
+        f:SetWidth(qrsize * BLOCK_SIZE)
+        f:SetHeight(qrsize * BLOCK_SIZE)
         f:SetMovable(true)
         f:EnableMouse(true)
-        f:SetBackdrop({ 
-            bgFile = "Interface/Tooltips/UI-Tooltip-Background",
-            edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-            tile = true,
-            tileEdge = true,
-            tileSize = 16,
-            edgeSize = 16,
-            insets = { left = 4, right = 4, top = 4, bottom = 4 },    
-        })
-
-        f:SetBackdropColor(1, 1, 1);
-
         f:SetPoint("CENTER", 0, 0)
         f:RegisterForDrag("LeftButton") 
         f:SetScript("OnDragStart", function(self) self:StartMoving() end)
         f:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
-    end
-
-    do
-        local b = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-        b:SetPoint("TOPRIGHT", f, 0, 0);
     end
 
     f.boxes = {}
