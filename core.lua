@@ -8,6 +8,10 @@ local PLAYER = "player";
 local CONCATENATION_CHARACTER_EXTERNAL = "$";
 local CONCATENATION_CHARACTER_INTERNAL = "-";
 local EQUIPMENT_SLOTS = { "HEADSLOT", "NECKSLOT", "SHOULDERSLOT", "BACKSLOT", "CHESTSLOT", "SHIRTSLOT", "TABARDSLOT", "WRISTSLOT", "HANDSSLOT", "WAISTSLOT", "LEGSSLOT", "FEETSLOT", "FINGER0SLOT", "FINGER1SLOT", "TRINKET0SLOT", "TRINKET1SLOT", "MAINHANDSLOT", "SECONDARYHANDSLOT", "RANGEDSLOT"};
+local BASE_32_DIGITS = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V"};
+local CHARACTER_RACES = { NONE = 0, HUMAN = 1, NIGHTELF = 2, DWARF = 3, GNOME = 4, ORC = 5, TROLL = 6, SCOURGE = 7, TAUREN = 8 };
+local CHARACTER_CLASSES = { NONE = 0, WARRIOR = 1, PALADIN = 2, HUNTER = 3, ROGUE = 4, PRIEST = 5, SHAMAN = 6, MAGE = 7, WARLOCK = 8, DRUID = 9 };
+
 
 local function CreateQRTip(qrsize)
     local mainFrame = CreateFrame("Frame", nil, UIParent, BackdropTemplateMixin and "BackdropTemplate")
@@ -54,7 +58,26 @@ local function CreateQRTip(qrsize)
 end
 
 local function ConcatenateStatusValue(status, value)
-    return status .. CONCATENATION_CHARACTER_EXTERNAL .. value
+    if string.len(status) == 0 then
+        return "" .. value;
+    else 
+        return status .. CONCATENATION_CHARACTER_EXTERNAL .. value
+    end
+end
+
+local function IntToBase32String(integer) 
+    if integer == nil or integer == 0 then
+        return "0";
+    end
+    local base32String = "";
+    local divisionResult = integer;
+    while divisionResult > 0 do
+        local modulo = divisionResult % 32;
+        local digit = BASE_32_DIGITS[modulo + 1];
+        base32String = digit..base32String;
+        divisionResult = math.floor(divisionResult / 32);
+    end
+    return base32String;
 end
 
 local function GetCharacterTalentsInWowheadFormat()
@@ -113,7 +136,8 @@ local function GetCharacterEquipment()
         local slotId, _ = GetInventorySlotInfo(inventorySlot);
         local equippedItemId = GetInventoryItemID(PLAYER, slotId);
         if equippedItemId ~= nil then
-            characterEquipment = characterEquipment..equippedItemId;
+            local itemIdBase32 = IntToBase32String(equippedItemId);
+            characterEquipment = characterEquipment..itemIdBase32;
         end
     end
     return characterEquipment;
@@ -121,29 +145,44 @@ end
 
 
 local function GetCharacterStatus() 
+    local characterStatus = "";
+
     -- TODO: Figure out encoding of character name (ideally we want only uppercase letters for smaller QR codes)
-    -- Name
-    local characterStatus = UnitName(PLAYER);
+    -- Name currently removed because it is a major pain to encode and it's typically visible on UI at a glance
+    -- local characterStatus = ConcatenateStatusValue(characterStatus, UnitName(PLAYER));
+    
     -- CLASS
-    characterStatus = ConcatenateStatusValue(characterStatus, UnitClass(PLAYER));
+    local _, englishClass, _ = UnitClass(PLAYER);
+    englishClass = string.upper(englishClass);
+    local classId = CHARACTER_CLASSES[englishClass];
+    if classId == nil then
+        classId = 0;
+    end
+    characterStatus = ConcatenateStatusValue(characterStatus, classId);
     -- RACE
-    characterStatus = ConcatenateStatusValue(characterStatus, UnitRace(PLAYER));
+    local _, raceEn, _ = UnitRace(PLAYER);
+    raceEn = string.upper(raceEn);
+    local raceId = CHARACTER_RACES[raceEn];
+    if raceId == nil then
+        raceId = 0;
+    end
+    characterStatus = ConcatenateStatusValue(characterStatus, raceId);
     -- LEVEL
-    characterStatus = ConcatenateStatusValue(characterStatus, UnitLevel(PLAYER));
+    characterStatus = ConcatenateStatusValue(characterStatus, IntToBase32String(UnitLevel(PLAYER)));
     -- TALENTS
     characterStatus = ConcatenateStatusValue(characterStatus, GetCharacterTalentsInWowheadFormat());
-    -- TODO: EQUIPMENT
+    -- EQUIPMENT
     characterStatus = ConcatenateStatusValue(characterStatus, GetCharacterEquipment());
     -- CURRENT HP
-    characterStatus = ConcatenateStatusValue(characterStatus, UnitHealth(PLAYER));
+    characterStatus = ConcatenateStatusValue(characterStatus, IntToBase32String(UnitHealth(PLAYER)));
     -- MAX HP
-    characterStatus = ConcatenateStatusValue(characterStatus, UnitHealthMax(PLAYER));
+    characterStatus = ConcatenateStatusValue(characterStatus, IntToBase32String(UnitHealthMax(PLAYER)));
     -- CURRENT MANA/ENERGY/RAGE
-    characterStatus = ConcatenateStatusValue(characterStatus, UnitPower(PLAYER));
+    characterStatus = ConcatenateStatusValue(characterStatus, IntToBase32String(UnitPower(PLAYER)));
     -- MAX MANA/ENERGY/RAGE
-    characterStatus = ConcatenateStatusValue(characterStatus, UnitPowerMax(PLAYER));
+    characterStatus = ConcatenateStatusValue(characterStatus, IntToBase32String(UnitPowerMax(PLAYER)));
     -- GOLD
-    characterStatus = ConcatenateStatusValue(characterStatus, GetMoney());
+    characterStatus = ConcatenateStatusValue(characterStatus, IntToBase32String(GetMoney()));
     
     return characterStatus
 end
@@ -152,7 +191,7 @@ end
 SlashCmdList["QRCODE"] = function(cmdParam, editbox)
     local characterStatus = GetCharacterStatus()
     DEFAULT_CHAT_FRAME:AddMessage(characterStatus);
-    local ok, tab_or_message = qrcode(characterStatus, 4)
+    local ok, tab_or_message = qrcode(characterStatus, 1)
     if not ok then
         print(tab_or_message)
     else
