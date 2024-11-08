@@ -90,19 +90,15 @@ local function GetCharacterStatus()
         end
         local tierBuffer = "";
         for tier = 1, maxTier do
-            local tierActive = false;
             for column = 1, maxColumn do
                 if talentTree[tier][column] ~= nil then
                     tierBuffer = tierBuffer..talentTree[tier][column];
                     if talentTree[tier][column] ~= 0 then
-                        tierActive = true;
+                        tabBuffer = tabBuffer..tierBuffer;
+                        tierBuffer = "";
+                        tabActive = true;
                     end
                 end
-            end
-            if tierActive then
-                tabBuffer = tabBuffer..tierBuffer;
-                tierBuffer = "";
-                tabActive = true;
             end
         end
         if tabIndex < numTabs then
