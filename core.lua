@@ -5,7 +5,9 @@ local qrcode = ADDONSELF.qrcode
 
 local BLOCK_SIZE = 2
 local PLAYER = "player";
-local CONCATENATION_CHARACTER = "$";
+local CONCATENATION_CHARACTER_EXTERNAL = "$";
+local CONCATENATION_CHARACTER_INTERNAL = "-";
+local EQUIPMENT_SLOTS = { "HEADSLOT", "NECKSLOT", "SHOULDERSLOT", "BACKSLOT", "CHESTSLOT", "SHIRTSLOT", "TABARDSLOT", "WRISTSLOT", "HANDSSLOT", "WAISTSLOT", "LEGSSLOT", "FEETSLOT", "FINGER0SLOT", "FINGER1SLOT", "TRINKET0SLOT", "TRINKET1SLOT", "MAINHANDSLOT", "SECONDARYHANDSLOT", "RANGEDSLOT"};
 
 local function CreateQRTip(qrsize)
     local mainFrame = CreateFrame("Frame", nil, UIParent, BackdropTemplateMixin and "BackdropTemplate")
@@ -52,20 +54,10 @@ local function CreateQRTip(qrsize)
 end
 
 local function ConcatenateStatusValue(status, value)
-    return status .. CONCATENATION_CHARACTER .. value
+    return status .. CONCATENATION_CHARACTER_EXTERNAL .. value
 end
 
-local function GetCharacterStatus() 
-    -- TODO: Figure out encoding of character name (ideally we want only uppercase letters for smaller QR codes)
-    -- Name
-    local characterStatus = UnitName(PLAYER)
-    -- CLASS
-    characterStatus = ConcatenateStatusValue(characterStatus, UnitClass(PLAYER))
-    -- RACE
-    characterStatus = ConcatenateStatusValue(characterStatus, UnitRace(PLAYER))
-    -- LEVEL
-    characterStatus = ConcatenateStatusValue(characterStatus, UnitLevel(PLAYER))
-    -- TALENTS
+local function GetCharacterTalentsInWowheadFormat()
     local wowheadTalentString = "";
     local tabBuffer = "";
     local numTabs = GetNumTalentTabs();
@@ -102,26 +94,56 @@ local function GetCharacterStatus()
             end
         end
         if tabIndex < numTabs then
-            tabBuffer = tabBuffer.."-";
+            tabBuffer = tabBuffer..CONCATENATION_CHARACTER_INTERNAL;
         end
         if tabActive then
             wowheadTalentString = wowheadTalentString..tabBuffer;
             tabBuffer = "";
         end
     end
-    characterStatus = ConcatenateStatusValue(characterStatus, wowheadTalentString)
+    return wowheadTalentString;
+end
+
+local function GetCharacterEquipment()
+    local characterEquipment = "";
+    for index, inventorySlot in ipairs(EQUIPMENT_SLOTS) do
+        if index > 1 then
+            characterEquipment = characterEquipment..CONCATENATION_CHARACTER_INTERNAL;
+        end
+        local slotId, _ = GetInventorySlotInfo(inventorySlot);
+        local equippedItemId = GetInventoryItemID(PLAYER, slotId);
+        if equippedItemId ~= nil then
+            characterEquipment = characterEquipment..equippedItemId;
+        end
+    end
+    return characterEquipment;
+end
+
+
+local function GetCharacterStatus() 
+    -- TODO: Figure out encoding of character name (ideally we want only uppercase letters for smaller QR codes)
+    -- Name
+    local characterStatus = UnitName(PLAYER);
+    -- CLASS
+    characterStatus = ConcatenateStatusValue(characterStatus, UnitClass(PLAYER));
+    -- RACE
+    characterStatus = ConcatenateStatusValue(characterStatus, UnitRace(PLAYER));
+    -- LEVEL
+    characterStatus = ConcatenateStatusValue(characterStatus, UnitLevel(PLAYER));
+    -- TALENTS
+    characterStatus = ConcatenateStatusValue(characterStatus, GetCharacterTalentsInWowheadFormat());
     -- TODO: EQUIPMENT
-    characterStatus = ConcatenateStatusValue(characterStatus, "NYI")
+    characterStatus = ConcatenateStatusValue(characterStatus, GetCharacterEquipment());
     -- CURRENT HP
-    characterStatus = ConcatenateStatusValue(characterStatus, UnitHealth(PLAYER))
+    characterStatus = ConcatenateStatusValue(characterStatus, UnitHealth(PLAYER));
     -- MAX HP
-    characterStatus = ConcatenateStatusValue(characterStatus, UnitHealthMax(PLAYER))
+    characterStatus = ConcatenateStatusValue(characterStatus, UnitHealthMax(PLAYER));
     -- CURRENT MANA/ENERGY/RAGE
-    characterStatus = ConcatenateStatusValue(characterStatus, UnitPower(PLAYER))
+    characterStatus = ConcatenateStatusValue(characterStatus, UnitPower(PLAYER));
     -- MAX MANA/ENERGY/RAGE
-    characterStatus = ConcatenateStatusValue(characterStatus, UnitPowerMax(PLAYER))
+    characterStatus = ConcatenateStatusValue(characterStatus, UnitPowerMax(PLAYER));
     -- GOLD
-    characterStatus = ConcatenateStatusValue(characterStatus, GetMoney())
+    characterStatus = ConcatenateStatusValue(characterStatus, GetMoney());
     
     return characterStatus
 end
