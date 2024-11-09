@@ -5,16 +5,22 @@ local qrcode = ADDONSELF.qrcode
 
 local BLOCK_SIZE = 2
 local PLAYER = "player";
-local CONCATENATION_CHARACTER_EXTERNAL = "$";
-local CONCATENATION_CHARACTER_INTERNAL = "-";
+local CHAR_FIELD_SEPARATOR = "$";
+local CHAR_VALUE_SEPARATOR = "-";
+local CHAR_PADDING = "%";
+
+local MIN_MESSAGE_SIZE = 155;
 local EQUIPMENT_SLOTS = { "HEADSLOT", "NECKSLOT", "SHOULDERSLOT", "BACKSLOT", "CHESTSLOT", "SHIRTSLOT", "TABARDSLOT", "WRISTSLOT", "HANDSSLOT", "WAISTSLOT", "LEGSSLOT", "FEETSLOT", "FINGER0SLOT", "FINGER1SLOT", "TRINKET0SLOT", "TRINKET1SLOT", "MAINHANDSLOT", "SECONDARYHANDSLOT", "RANGEDSLOT"};
 local BASE_32_DIGITS = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V"};
 local CHARACTER_RACES = { NONE = 0, HUMAN = 1, NIGHTELF = 2, DWARF = 3, GNOME = 4, ORC = 5, TROLL = 6, SCOURGE = 7, TAUREN = 8 };
 local CHARACTER_CLASSES = { NONE = 0, WARRIOR = 1, PALADIN = 2, HUNTER = 3, ROGUE = 4, PRIEST = 5, SHAMAN = 6, MAGE = 7, WARLOCK = 8, DRUID = 9 };
 
+local mainFrame;
 
-local function CreateQRTip(qrsize)
-    local mainFrame = CreateFrame("Frame", nil, UIParent, BackdropTemplateMixin and "BackdropTemplate")
+local function CreateQRTip(qrsize, containerFrame)
+    if containerFrame.boxes ~= nil then
+        return mainFrame;
+    end
 
     local function CreateBlock(idx)
         local blockFrame = CreateFrame("Frame", nil, mainFrame, BackdropTemplateMixin and "BackdropTemplate")
@@ -29,39 +35,39 @@ local function CreateQRTip(qrsize)
     end
 
     do
-        mainFrame:SetFrameStrata("BACKGROUND")
-        mainFrame:SetWidth(qrsize * BLOCK_SIZE)
-        mainFrame:SetHeight(qrsize * BLOCK_SIZE)
-        mainFrame:SetMovable(true)
-        mainFrame:EnableMouse(true)
-        mainFrame:SetPoint("CENTER", 0, 0)
-        mainFrame:RegisterForDrag("LeftButton") 
-        mainFrame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-        mainFrame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+        containerFrame:SetFrameStrata("BACKGROUND")
+        containerFrame:SetWidth(qrsize * BLOCK_SIZE)
+        containerFrame:SetHeight(qrsize * BLOCK_SIZE)
+        containerFrame:SetMovable(true)
+        containerFrame:EnableMouse(true)
+        containerFrame:SetPoint("CENTER", 0, 0)
+        containerFrame:RegisterForDrag("LeftButton") 
+        containerFrame:SetScript("OnDragStart", function(self) self:StartMoving() end)
+        containerFrame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
     end
 
-    mainFrame.boxes = {}
+    containerFrame.boxes = {}
 
-    mainFrame.SetBlack = function(idx)
-        mainFrame.boxes[idx].texture:SetColorTexture(0, 0, 0)
+    containerFrame.SetBlack = function(idx)
+        containerFrame.boxes[idx].texture:SetColorTexture(0, 0, 0)
     end
 
-    mainFrame.SetWhite = function(idx)
-        mainFrame.boxes[idx].texture:SetColorTexture(1, 1, 1)
+    containerFrame.SetWhite = function(idx)
+        containerFrame.boxes[idx].texture:SetColorTexture(1, 1, 1)
     end
 
     for i = 1, qrsize * qrsize do
-        tinsert(mainFrame.boxes, CreateBlock(i - 1))
+        tinsert(containerFrame.boxes, CreateBlock(i - 1))
     end
 
-    return mainFrame
+    return containerFrame
 end
 
 local function ConcatenateStatusValue(status, value)
     if string.len(status) == 0 then
         return "" .. value;
     else 
-        return status .. CONCATENATION_CHARACTER_EXTERNAL .. value
+        return status .. CHAR_FIELD_SEPARATOR .. value
     end
 end
 
@@ -117,7 +123,7 @@ local function GetCharacterTalentsInWowheadFormat()
             end
         end
         if tabIndex < numTabs then
-            tabBuffer = tabBuffer..CONCATENATION_CHARACTER_INTERNAL;
+            tabBuffer = tabBuffer..CHAR_VALUE_SEPARATOR;
         end
         if tabActive then
             wowheadTalentString = wowheadTalentString..tabBuffer;
@@ -131,7 +137,7 @@ local function GetCharacterEquipment()
     local characterEquipment = "";
     for index, inventorySlot in ipairs(EQUIPMENT_SLOTS) do
         if index > 1 then
-            characterEquipment = characterEquipment..CONCATENATION_CHARACTER_INTERNAL;
+            characterEquipment = characterEquipment..CHAR_VALUE_SEPARATOR;
         end
         local slotId, _ = GetInventorySlotInfo(inventorySlot);
         local equippedItemId = GetInventoryItemID(PLAYER, slotId);
@@ -184,21 +190,38 @@ local function GetCharacterStatus()
     -- GOLD
     characterStatus = ConcatenateStatusValue(characterStatus, IntToBase32String(GetMoney()));
     
-    return characterStatus
+    return characterStatus;
 end
 
+local function PadMessageToMinLength(message, minLength, paddingChar) 
+    if message == nil then
+        return message;
+    end
+    local messageLength = string.len(message);
+    if messageLength < minLength then
+        local paddedMessage = message;
+        for i = 1, minLength - messageLength do
+            paddedMessage = paddedMessage..paddingChar;
+        end
+        return paddedMessage;
+    else 
+        return message;
+    end
+end
 
-SlashCmdList["QRCODE"] = function(cmdParam, editbox)
-    local characterStatus = GetCharacterStatus()
-    DEFAULT_CHAT_FRAME:AddMessage(characterStatus);
-    local ok, tab_or_message = qrcode(characterStatus, 1)
+local function RefreshQRCode() 
+    local characterStatus = GetCharacterStatus();
+    local message = PadMessageToMinLength(characterStatus, MIN_MESSAGE_SIZE, CHAR_PADDING);
+
+    DEFAULT_CHAT_FRAME:AddMessage(message);
+    local ok, tab_or_message = qrcode(message, 1)
     if not ok then
         print(tab_or_message)
     else
         local tab = tab_or_message
         local size = #tab
 
-        local f = CreateQRTip(size)
+        local f = CreateQRTip(size, mainFrame)
         f:Show()
 
         for x = 1, #tab do
@@ -212,6 +235,19 @@ SlashCmdList["QRCODE"] = function(cmdParam, editbox)
             end
         end
     end
-
 end
+
+mainFrame = CreateFrame("Frame", nil, UIParent, BackdropTemplateMixin and "BackdropTemplate");
+mainFrame:RegisterEvent("PLAYER_ENTERING_WORLD");
+
+local function EventHandler(self, event, ...)
+    RefreshQRCode();
+end
+
+mainFrame:SetScript("OnEvent", EventHandler);
+
+SlashCmdList["QRCODE"] = function(cmdParam, editbox)
+    RefreshQRCode();
+end
+
 SLASH_QRCODE1 = "/QRCODE"
