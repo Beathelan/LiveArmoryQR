@@ -8,6 +8,8 @@ local PLAYER = "player";
 local CHAR_FIELD_SEPARATOR = "$";
 local CHAR_VALUE_SEPARATOR = "-";
 local CHAR_PADDING = "%";
+local REPAINT_CD_SEC = 0.250;
+
 
 local MIN_MESSAGE_SIZE = 155;
 local EQUIPMENT_SLOTS = { "HEADSLOT", "NECKSLOT", "SHOULDERSLOT", "BACKSLOT", "CHESTSLOT", "SHIRTSLOT", "TABARDSLOT", "WRISTSLOT", "HANDSSLOT", "WAISTSLOT", "LEGSSLOT", "FEETSLOT", "FINGER0SLOT", "FINGER1SLOT", "TRINKET0SLOT", "TRINKET1SLOT", "MAINHANDSLOT", "SECONDARYHANDSLOT", "RANGEDSLOT"};
@@ -15,7 +17,25 @@ local BASE_32_DIGITS = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "
 local CHARACTER_RACES = { NONE = 0, HUMAN = 1, NIGHTELF = 2, DWARF = 3, GNOME = 4, ORC = 5, TROLL = 6, SCOURGE = 7, TAUREN = 8 };
 local CHARACTER_CLASSES = { NONE = 0, WARRIOR = 1, PALADIN = 2, HUNTER = 3, ROGUE = 4, PRIEST = 5, SHAMAN = 6, MAGE = 7, WARLOCK = 8, DRUID = 9 };
 
+local EVENT_PLAYER_ENTERING_WORLD = "PLAYER_ENTERING_WORLD";
+local EVENT_CHARACTER_POINTS_CHANGED = "CHARACTER_POINTS_CHANGED";
+local EVENT_PLAYER_EQUIPMENT_CHANGED = "PLAYER_EQUIPMENT_CHANGED";
+local EVENT_PLAYER_LEVEL_UP = "PLAYER_LEVEL_UP";
+local EVENT_PLAYER_MONEY = "PLAYER_MONEY";
+local EVENT_UNIT_HEALTH = "UNIT_HEALTH";
+local EVENT_UNIT_MAXHEALTH = "UNIT_MAXHEALTH";
+local EVENT_UNIT_POWER_UPDATE = "UNIT_POWER_UPDATE";
+local EVENT_UNIT_MAXPOWER = "UNIT_MAXPOWER";
+
+local EVENTS_WITH_UNIT_ID = { UNIT_HEALTH = true, UNIT_MAXHEALTH = true, UNIT_POWER_UPDATE = true, UNIT_MAXPOWER = true };
+
 local mainFrame;
+local debugMode = false;
+local repaintCdRemainingSec = 0;
+
+local repaint = 0;
+local lastMessage = nil;
+local playerEnteredWorld = false;
 
 local function CreateQRTip(qrsize, containerFrame)
     if containerFrame.boxes ~= nil then
@@ -40,7 +60,7 @@ local function CreateQRTip(qrsize, containerFrame)
         containerFrame:SetHeight(qrsize * BLOCK_SIZE)
         containerFrame:SetMovable(true)
         containerFrame:EnableMouse(true)
-        containerFrame:SetPoint("CENTER", 0, 0)
+        containerFrame:SetPoint("TOPLEFT", 0, 0)
         containerFrame:RegisterForDrag("LeftButton") 
         containerFrame:SetScript("OnDragStart", function(self) self:StartMoving() end)
         containerFrame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
@@ -212,13 +232,21 @@ end
 local function RefreshQRCode() 
     local characterStatus = GetCharacterStatus();
     local message = PadMessageToMinLength(characterStatus, MIN_MESSAGE_SIZE, CHAR_PADDING);
-
-    DEFAULT_CHAT_FRAME:AddMessage(message);
-    local ok, tab_or_message = qrcode(message, 1)
+    if message == lastMessage then
+        -- Skip painting 
+        return;
+    end
+    lastMessage = message;
+    repaint = repaint + 1;
+    if debugMode then
+        DEFAULT_CHAT_FRAME:AddMessage(repaint);
+    end
+    
+    local ok, qrcodeOrErrorMessage = qrcode(message, 1)
     if not ok then
-        print(tab_or_message)
+        print(qrcodeOrErrorMessage)
     else
-        local tab = tab_or_message
+        local tab = qrcodeOrErrorMessage
         local size = #tab
 
         local f = CreateQRTip(size, mainFrame)
@@ -237,17 +265,50 @@ local function RefreshQRCode()
     end
 end
 
+local function OnUpdateHandler(self, elapsed)
+    repaintCdRemainingSec = repaintCdRemainingSec - elapsed;
+    if repaintCdRemainingSec <= 0 then
+        RefreshQRCode();
+        repaintCdRemainingSec = repaintCdRemainingSec + REPAINT_CD_SEC;
+    end
+end
+
 mainFrame = CreateFrame("Frame", nil, UIParent, BackdropTemplateMixin and "BackdropTemplate");
-mainFrame:RegisterEvent("PLAYER_ENTERING_WORLD");
+mainFrame:SetScript("OnUpdate", OnUpdateHandler);
+
+--mainFrame:RegisterEvent(EVENT_CHARACTER_POINTS_CHANGED);
+--mainFrame:RegisterEvent(EVENT_PLAYER_EQUIPMENT_CHANGED);
+--mainFrame:RegisterEvent(EVENT_PLAYER_LEVEL_UP);
+--mainFrame:RegisterEvent(EVENT_PLAYER_MONEY);
+--mainFrame:RegisterEvent(EVENT_UNIT_HEALTH);
+--mainFrame:RegisterEvent(EVENT_UNIT_MAXHEALTH);
+--mainFrame:RegisterEvent(EVENT_UNIT_POWER_UPDATE);
+--mainFrame:RegisterEvent(EVENT_UNIT_MAXPOWER);
+
+
 
 local function EventHandler(self, event, ...)
-    RefreshQRCode();
+    --if EVENTS_WITH_UNIT_ID[event] == true then
+    --    local unitId = ...;
+    --    if unitId ~= PLAYER then
+            -- Ignore this event if it doesn't pertain to the player
+    --        return;
+    --    end
+    -- end
+    --RefreshQRCode();
+    --mainFrame:SetScript("OnUpdate", OnUpdateHandler);
 end
 
 mainFrame:SetScript("OnEvent", EventHandler);
+mainFrame:RegisterEvent(EVENT_PLAYER_ENTERING_WORLD);
 
 SlashCmdList["QRCODE"] = function(cmdParam, editbox)
-    RefreshQRCode();
+    if cmdParam == "debug" then
+        debugMode = not debugMode;
+        DEFAULT_CHAT_FRAME:AddMessage("wow-qrcode debug mode set to "..tostring(debugMode));
+    else 
+        RefreshQRCode();
+    end
 end
 
 SLASH_QRCODE1 = "/QRCODE"
