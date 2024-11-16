@@ -1,8 +1,8 @@
 --- The qrcode library is licensed under the 3-clause BSD license (aka "new BSD")
 --- To get in contact with the author, mail to <gundlach@speedata.de>.
 ---
---- Please report bugs on the [github project page](http://speedata.github.com/luaqrcode/).
--- Copyright (c) 2012, Patrick Gundlach
+--- Please report bugs on the [github project page](http://speedata.github.io/luaqrcode/).
+-- Copyright (c) 2012-2020, Patrick Gundlach and contributors, see https://github.com/speedata/luaqrcode
 -- All rights reserved.
 --
 -- Redistribution and use in source and binary forms, with or without
@@ -12,14 +12,14 @@
 --	 * Redistributions in binary form must reproduce the above copyright
 --	   notice, this list of conditions and the following disclaimer in the
 --	   documentation and/or other materials provided with the distribution.
---	 * Neither the name of the <organization> nor the
+--	 * Neither the name of SPEEDATA nor the
 --	   names of its contributors may be used to endorse or promote products
 --	   derived from this software without specific prior written permission.
 --
 -- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 -- ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 -- WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
--- DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+-- DISCLAIMED. IN NO EVENT SHALL SPEEDATA GMBH BE LIABLE FOR ANY
 -- DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 -- (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
 -- LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -177,7 +177,6 @@ end
 -- See table 2 of the spec. We only support mode 1, 2 and 4.
 -- That is: numeric, alaphnumeric and binary.
 local function get_mode( str )
-	local mode
 	if string.match(str,"^[0-9]+$") then
 		return 1
 	elseif string.match(str,"^[0-9A-Z $%%*./:+-]+$") then
@@ -185,7 +184,7 @@ local function get_mode( str )
 	else
 		return 4
 	end
-	assert(false,"never reached")
+	assert(false,"never reached") -- luacheck: ignore
 	return nil
 end
 
@@ -232,7 +231,7 @@ local function get_version_eclevel(len,mode,requested_ec_level)
 	end
 	assert( local_mode <= 4 )
 
-	local bytes, bits, digits, modebits, c
+	local bits, digits, modebits, c
 	local tab = { {10,9,8,8},{12,11,16,10},{14,13,16,12} }
 	local minversion = 40
 	local maxec_level = requested_ec_level or 1
@@ -435,8 +434,9 @@ end
 
 --- ### Reed Solomon error correction
 --- Now this is the slightly ugly part of the error correction. We start with log/antilog tables
+-- https://codyplanteen.com/assets/rs/gf256_log_antilog.pdf
 local alpha_int = {
-	[0] = 0,
+	[0] = 1,
 	  2,   4,   8,  16,  32,  64, 128,  29,  58, 116, 232, 205, 135,  19,  38,  76,
 	152,  45,  90, 180, 117, 234, 201, 143,   3,   6,  12,  24,  48,  96, 192, 157,
 	 39,  78, 156,  37,  74, 148,  53, 106, 212, 181, 119, 238, 193, 159,  35,  70,
@@ -452,12 +452,12 @@ local alpha_int = {
 	 25,  50, 100, 200, 141,   7,  14,  28,  56, 112, 224, 221, 167,  83, 166,  81,
 	162,  89, 178, 121, 242, 249, 239, 195, 155,  43,  86, 172,  69, 138,   9,  18,
 	 36,  72, 144,  61, 122, 244, 245, 247, 243, 251, 235, 203, 139,  11,  22,  44,
-	 88, 176, 125, 250, 233, 207, 131,  27,  54, 108, 216, 173,  71, 142,   1
+	 88, 176, 125, 250, 233, 207, 131,  27,  54, 108, 216, 173,  71, 142,   0,   0
 }
 
 local int_alpha = {
-	[0] = 0,
-	255,   1,  25,   2,  50,  26, 198,   3, 223,  51, 238,  27, 104, 199,  75,   4,
+	[0] = 256, -- special value
+	0,   1,  25,   2,  50,  26, 198,   3, 223,  51, 238,  27, 104, 199,  75,   4,
 	100, 224,  14,  52, 141, 239, 129,  28, 193, 105, 248, 200,   8,  76, 113,   5,
 	138, 101,  47, 225,  36,  15,  33,  53, 147, 142, 218, 240,  18, 130,  69,  29,
 	181, 194, 125, 106,  39, 249, 185, 201, 154,   9, 120,  77, 228, 114, 166,   6,
@@ -496,9 +496,9 @@ local generator_polynomial = {
 -- Turn a binary string of length 8*x into a table size x of numbers.
 local function convert_bitstring_to_bytes(data)
 	local msg = {}
-	local tab = string.gsub(data,"(........)",function(x)
+	string.gsub(data,"(........)",function(x)
 		msg[#msg+1] = tonumber(x,2)
-		end)
+	end)
 	return msg
 end
 
@@ -528,7 +528,7 @@ local function convert_to_alpha( tab )
 end
 
 -- Convert polynominal in alpha notation to int notation.
-local function convert_to_int(tab,len_message)
+local function convert_to_int(tab)
 	local new_tab = {}
 	for i=0,#tab do
 		new_tab[i] = alpha_int[tab[i]]
@@ -544,15 +544,15 @@ local function calculate_error_correction(data,num_ec_codewords)
 	elseif type(data)=="table" then
 		mp = data
 	else
-		assert(false,"Unknown type for data: %s",type(data))
+		assert(false,string.format("Unknown type for data: %s",type(data)))
 	end
 	local len_message = #mp
 
 	local highest_exponent = len_message + num_ec_codewords - 1
 	local gp_alpha,tmp
 	local he
-	local gp_int = {}
-	local mp_int,mp_alpha = {},{}
+	local gp_int, mp_alpha
+	local mp_int = {}
 	-- create message shifted to left (highest exponent)
 	for i=1,len_message do
 		mp_int[highest_exponent - i + 1] = mp[i]
@@ -573,14 +573,18 @@ local function calculate_error_correction(data,num_ec_codewords)
 		-- it to the generator polynom
 		local exp = mp_alpha[highest_exponent]
 		for i=highest_exponent,highest_exponent - num_ec_codewords,-1 do
-			if gp_alpha[i] + exp > 255 then
-				gp_alpha[i] = math.fmod(gp_alpha[i] + exp,255)
+			if exp ~= 256 then
+				if gp_alpha[i] + exp >= 255 then
+					gp_alpha[i] = math.fmod(gp_alpha[i] + exp,255)
+				else
+					gp_alpha[i] = gp_alpha[i] + exp
+				end
 			else
-				gp_alpha[i] = gp_alpha[i] + exp
+				gp_alpha[i] = 256
 			end
 		end
 		for i=highest_exponent - num_ec_codewords - 1,0,-1 do
-			gp_alpha[i] = 0
+			gp_alpha[i] = 256
 		end
 
 		gp_int = convert_to_int(gp_alpha)
@@ -716,26 +720,29 @@ local function arrange_codewords_and_calculate_ec( version,ec_level,data )
 	local blocks = ecblocks[version][ec_level]
 	local size_datablock_bytes, size_ecblock_bytes
 	local datablocks = {}
-	local ecblocks = {}
+	local final_ecblocks = {}
 	local count = 1
 	local pos = 0
 	local cpty_ec_bits = 0
 	for i=1,#blocks/2 do
-		for j=1,blocks[2*i - 1] do
+		for _=1,blocks[2*i - 1] do
 			size_datablock_bytes = blocks[2*i][2]
 			size_ecblock_bytes   = blocks[2*i][1] - blocks[2*i][2]
 			cpty_ec_bits = cpty_ec_bits + size_ecblock_bytes * 8
 			datablocks[#datablocks + 1] = string.sub(data, pos * 8 + 1,( pos + size_datablock_bytes)*8)
-			tmp_tab = calculate_error_correction(datablocks[#datablocks],size_ecblock_bytes)
-			tmp_str = ""
+			local tmp_tab = calculate_error_correction(datablocks[#datablocks],size_ecblock_bytes)
+			local tmp_str = ""
 			for x=1,#tmp_tab do
 				tmp_str = tmp_str .. binary(tmp_tab[x],8)
 			end
-			ecblocks[#ecblocks + 1] = tmp_str
+			final_ecblocks[#final_ecblocks + 1] = tmp_str
 			pos = pos + size_datablock_bytes
 			count = count + 1
+			coroutine.yield()
 		end
+		coroutine.yield()
 	end
+	coroutine.yield()
 	local arranged_data = ""
 	pos = 1
 	repeat
@@ -746,13 +753,14 @@ local function arrange_codewords_and_calculate_ec( version,ec_level,data )
 		end
 		pos = pos + 8
 	until #arranged_data == #data
+	coroutine.yield()
 	-- ec
 	local arranged_ec = ""
 	pos = 1
 	repeat
-		for i=1,#ecblocks do
-			if pos < #ecblocks[i] then
-				arranged_ec = arranged_ec .. string.sub(ecblocks[i],pos, pos + 7)
+		for i=1,#final_ecblocks do
+			if pos < #final_ecblocks[i] then
+				arranged_ec = arranged_ec .. string.sub(final_ecblocks[i],pos, pos + 7)
 			end
 		end
 		pos = pos + 8
@@ -971,7 +979,7 @@ local function add_version_information(matrix,version)
 	local x,y, bit
 	local start_x, start_y
 	-- first top right
-	start_x = #matrix - 10
+	start_x = size - 10
 	start_y = 1
 	for i=1,#bitstring do
 		bit = string.sub(bitstring,i,i)
@@ -982,7 +990,7 @@ local function add_version_information(matrix,version)
 
 	-- now bottom left
 	start_x = 1
-	start_y = #matrix - 10
+	start_y = size - 10
 	for i=1,#bitstring do
 		bit = string.sub(bitstring,i,i)
 		x = start_x + math.floor( (i - 1) / 3 )
@@ -1034,7 +1042,7 @@ local function get_pixel_with_mask( mask, x,y,value )
 	y = y - 1
 	local invert = false
 	-- test purpose only:
-	if mask == -1 then
+	if mask == -1 then -- luacheck: ignore
 		-- ignore, no masking applied
 	elseif mask == 0 then
 		if math.fmod(x + y,2) == 0 then invert = true end
@@ -1119,7 +1127,7 @@ end
 
 -- Add the data string (0's and 1's) to the matrix for the given mask.
 local function add_data_to_matrix(matrix,data,mask)
-	size = #matrix
+	local size = #matrix
 	local x,y,positions
 	local _x,_y,m
 	local dir = "up"
@@ -1127,7 +1135,7 @@ local function add_data_to_matrix(matrix,data,mask)
 	x,y = size,size
 	string.gsub(data,".?.?.?.?.?.?.?.?",function ( byte )
 		byte_number = byte_number + 1
-		positions,x,y,dir = get_next_free_positions(matrix,x,y,dir,byte,mask)
+		positions,x,y,dir = get_next_free_positions(matrix,x,y,dir,byte)
 		for i=1,#byte do
 			_x = positions[i][1]
 			_y = positions[i][2]
@@ -1153,7 +1161,7 @@ end
 --- reading the code.
 -- Return the penalty for the given matrix
 local function calculate_penalty(matrix)
-	local penalty1, penalty2, penalty3, penalty4 = 0,0,0,0
+	local penalty1, penalty2, penalty3 = 0,0,0
 	local size = #matrix
 	-- this is for penalty 4
 	local number_of_dark_cells = 0
@@ -1176,7 +1184,6 @@ local function calculate_penalty(matrix)
 			else
 				is_blank = true
 			end
-			is_blank = matrix[x][y] < 0
 			if last_bit_blank == is_blank then
 				number_of_consecutive_bits = number_of_consecutive_bits + 1
 			else
@@ -1268,7 +1275,7 @@ local function calculate_penalty(matrix)
 	-- ----------------------------------------------
 	-- 50 ± (5 × k)% to 50 ± (5 × (k + 1))% -> 10 × k
 	local dark_ratio = number_of_dark_cells / ( size * size )
-	penalty4 = math.floor(math.abs(dark_ratio * 100 - 50)) * 2
+	local penalty4 = math.floor(math.abs(dark_ratio * 100 - 50)) * 2
 	return penalty1 + penalty2 + penalty3 + penalty4
 end
 
@@ -1290,12 +1297,14 @@ local function get_matrix_with_lowest_penalty(version,ec_level,data)
 
 	-- try masks 0-7
 	tab_min_penalty, min_penalty = get_matrix_and_penalty(version,ec_level,data,0)
+	coroutine.yield()
 	for i=1,7 do
 		tab, penalty = get_matrix_and_penalty(version,ec_level,data,i)
 		if penalty < min_penalty then
 			tab_min_penalty = tab
 			min_penalty = penalty
 		end
+		coroutine.yield()
 	end
 	return tab_min_penalty
 end
@@ -1308,17 +1317,21 @@ end
 --- 1. Generate 8 matrices with different masks and calculate the penalty
 --- 1. Return qrcode with least penalty
 -- If ec_level or mode is given, use the ones for generating the qrcode. (mode is not implemented yet)
-local function qrcode( str, ec_level, mode )
+local function qrcode( str, ec_level, _mode ) -- luacheck: no unused args
 	local arranged_data, version, data_raw, mode, len_bitstring
 	version, ec_level, data_raw, mode, len_bitstring = get_version_eclevel_mode_bistringlength(str,ec_level)
 	data_raw = data_raw .. len_bitstring
 	data_raw = data_raw .. encode_data(str,mode)
+	coroutine.yield()
 	data_raw = add_pad_data(version,ec_level,data_raw)
+	coroutine.yield()
 	arranged_data = arrange_codewords_and_calculate_ec(version,ec_level,data_raw)
+	coroutine.yield()
 	if math.fmod(#arranged_data,8) ~= 0 then
 		return false, string.format("Arranged data %% 8 != 0: data length = %d, mod 8 = %d",#arranged_data, math.fmod(#arranged_data,8))
 	end
 	arranged_data = arranged_data .. string.rep("0",remainder[version])
+	coroutine.yield()
 	local tab = get_matrix_with_lowest_penalty(version,ec_level,arranged_data)
 	return true, tab
 end

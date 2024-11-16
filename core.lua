@@ -35,7 +35,15 @@ local repaintCdRemainingSec = 0;
 
 local repaint = 0;
 local lastMessage = nil;
-local playerEnteredWorld = false;
+local lastPrintedQR = nil;
+
+local qrRefreshCoroutine = nil;
+
+local function PrintDebug(message)
+    if debugMode then
+        DEFAULT_CHAT_FRAME:AddMessage(message);
+    end
+end
 
 local function CreateQRTip(qrsize, containerFrame)
     if containerFrame.boxes ~= nil then
@@ -48,6 +56,8 @@ local function CreateQRTip(qrsize, containerFrame)
         blockFrame:SetHeight(BLOCK_SIZE)
         blockFrame.texture = blockFrame:CreateTexture(nil, "OVERLAY")
         blockFrame.texture:SetAllPoints(blockFrame)
+        blockFrame.texture:SetColorTexture(0, 0, 0, 1);
+        blockFrame:Hide();
         local x = (idx % qrsize) * BLOCK_SIZE
         local y = (math.floor(idx / qrsize)) * BLOCK_SIZE
         blockFrame:SetPoint("TOPLEFT", mainFrame, x, -y);
@@ -55,32 +65,65 @@ local function CreateQRTip(qrsize, containerFrame)
     end
 
     do
-        containerFrame:SetFrameStrata("BACKGROUND")
-        containerFrame:SetWidth(qrsize * BLOCK_SIZE)
-        containerFrame:SetHeight(qrsize * BLOCK_SIZE)
-        containerFrame:SetMovable(true)
-        containerFrame:EnableMouse(true)
-        containerFrame:SetPoint("TOPLEFT", 0, 0)
-        containerFrame:RegisterForDrag("LeftButton") 
-        containerFrame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-        containerFrame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+        containerFrame:SetFrameStrata("BACKGROUND");
+        containerFrame:SetWidth(qrsize * BLOCK_SIZE);
+        containerFrame:SetHeight(qrsize * BLOCK_SIZE);
+        containerFrame:SetMovable(true);
+        containerFrame:EnableMouse(true);
+        containerFrame:SetPoint("TOPLEFT", 0, 0);
+        containerFrame:RegisterForDrag("LeftButton") ;
+        containerFrame:SetScript("OnDragStart", function(self) self:StartMoving() end);
+        containerFrame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end);
+        containerFrame.texture = containerFrame:CreateTexture(nil, "OVERLAY");
+        containerFrame.texture:SetAllPoints(containerFrame);
+        containerFrame.texture:SetColorTexture(1, 1, 1);
     end
 
     containerFrame.boxes = {}
 
     containerFrame.SetBlack = function(idx)
-        containerFrame.boxes[idx].texture:SetColorTexture(0, 0, 0)
+        containerFrame.boxes[idx]:Show();
     end
 
     containerFrame.SetWhite = function(idx)
-        containerFrame.boxes[idx].texture:SetColorTexture(1, 1, 1)
+        containerFrame.boxes[idx]:Hide();
     end
 
     for i = 1, qrsize * qrsize do
         tinsert(containerFrame.boxes, CreateBlock(i - 1))
     end
+    containerFrame:Show();
 
     return containerFrame
+end
+
+local function CalculateAndPrintQrCode()
+    PrintDebug("Requested repaint at "..GetTime());
+    local ok, qrcodeOrErrorMessage = qrcode(lastMessage, 1);
+    if not ok then
+        print(qrcodeOrErrorMessage);
+    else
+        local tab = qrcodeOrErrorMessage
+        local size = #tab
+
+        local f = CreateQRTip(size, mainFrame)
+        
+        for x = 1, #tab do
+            for y = 1, #tab do
+                if lastPrintedQR == nil or tab[x][y] ~= lastPrintedQR[x][y] then
+                    if tab[x][y] > 0 then
+                        f.SetBlack((y - 1) * size + x - 1 + 1)
+                    else
+                        f.SetWhite((y - 1) * size + x - 1 + 1)
+                    end
+                end
+            end
+        end
+        lastPrintedQR = tab;
+    end
+    PrintDebug("Finished repaint at "..GetTime());
+    repaint = repaint + 1;
+    PrintDebug("QR Code repaint count: "..repaint);
 end
 
 local function ConcatenateStatusValue(status, value)
@@ -230,42 +273,28 @@ local function PadMessageToMinLength(message, minLength, paddingChar)
 end
 
 local function RefreshQRCode() 
+    if qrRefreshCoroutine ~= nil and coroutine.status(qrRefreshCoroutine) ~= "dead" then
+        -- If we haven't finished re-painting the previous message, do not re-paint (just let it finish)
+        return;
+    end
     local characterStatus = GetCharacterStatus();
     local message = PadMessageToMinLength(characterStatus, MIN_MESSAGE_SIZE, CHAR_PADDING);
     if message == lastMessage then
-        -- Skip painting 
+        -- If the message hasn't changed, there is no need to re-paint
         return;
     end
-    lastMessage = message;
-    repaint = repaint + 1;
-    if debugMode then
-        DEFAULT_CHAT_FRAME:AddMessage(repaint);
-    end
     
-    local ok, qrcodeOrErrorMessage = qrcode(message, 1)
-    if not ok then
-        print(qrcodeOrErrorMessage)
-    else
-        local tab = qrcodeOrErrorMessage
-        local size = #tab
-
-        local f = CreateQRTip(size, mainFrame)
-        f:Show()
-
-        for x = 1, #tab do
-            for y = 1, #tab do
-
-                if tab[x][y] > 0 then
-                    f.SetBlack((y - 1) * size + x - 1 + 1)
-                else
-                    f.SetWhite((y - 1) * size + x - 1 + 1)
-                end
-            end
-        end
-    end
+    lastMessage = message;
+    qrRefreshCoroutine = coroutine.create(CalculateAndPrintQrCode);
 end
 
 local function OnUpdateHandler(self, elapsed)
+    if elapsed > 0.01 then
+        PrintDebug(elapsed);
+    end
+    if qrRefreshCoroutine ~= nil and coroutine.status(qrRefreshCoroutine) == "suspended" then
+        coroutine.resume(qrRefreshCoroutine);
+    end
     repaintCdRemainingSec = repaintCdRemainingSec - elapsed;
     if repaintCdRemainingSec <= 0 then
         RefreshQRCode();
@@ -275,32 +304,6 @@ end
 
 mainFrame = CreateFrame("Frame", nil, UIParent, BackdropTemplateMixin and "BackdropTemplate");
 mainFrame:SetScript("OnUpdate", OnUpdateHandler);
-
---mainFrame:RegisterEvent(EVENT_CHARACTER_POINTS_CHANGED);
---mainFrame:RegisterEvent(EVENT_PLAYER_EQUIPMENT_CHANGED);
---mainFrame:RegisterEvent(EVENT_PLAYER_LEVEL_UP);
---mainFrame:RegisterEvent(EVENT_PLAYER_MONEY);
---mainFrame:RegisterEvent(EVENT_UNIT_HEALTH);
---mainFrame:RegisterEvent(EVENT_UNIT_MAXHEALTH);
---mainFrame:RegisterEvent(EVENT_UNIT_POWER_UPDATE);
---mainFrame:RegisterEvent(EVENT_UNIT_MAXPOWER);
-
-
-
-local function EventHandler(self, event, ...)
-    --if EVENTS_WITH_UNIT_ID[event] == true then
-    --    local unitId = ...;
-    --    if unitId ~= PLAYER then
-            -- Ignore this event if it doesn't pertain to the player
-    --        return;
-    --    end
-    -- end
-    --RefreshQRCode();
-    --mainFrame:SetScript("OnUpdate", OnUpdateHandler);
-end
-
-mainFrame:SetScript("OnEvent", EventHandler);
-mainFrame:RegisterEvent(EVENT_PLAYER_ENTERING_WORLD);
 
 SlashCmdList["QRCODE"] = function(cmdParam, editbox)
     if cmdParam == "debug" then
