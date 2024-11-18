@@ -264,8 +264,8 @@ local function PadMessageToMinLength(message, minLength, paddingChar)
     end
     local messageLength = string.len(message);
     if messageLength < minLength then
-        local paddedMessage = message;
-        for i = 1, minLength - messageLength do
+        local paddedMessage = message..CHAR_FIELD_SEPARATOR;
+        for i = 1, minLength - messageLength - 1 do
             paddedMessage = paddedMessage..paddingChar;
         end
         return paddedMessage;
