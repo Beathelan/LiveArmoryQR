@@ -246,6 +246,8 @@ local function GetCharacterStatus()
     characterStatus = ConcatenateStatusValue(characterStatus, IntToBase32String(UnitHealth(PLAYER)));
     -- MAX HP
     characterStatus = ConcatenateStatusValue(characterStatus, IntToBase32String(UnitHealthMax(PLAYER)));
+    -- CURRENT POWER TYPE: MANA/ENERGY/RAGE
+    characterStatus = ConcatenateStatusValue(characterStatus, UnitPowerType(PLAYER));
     -- CURRENT MANA/ENERGY/RAGE
     characterStatus = ConcatenateStatusValue(characterStatus, IntToBase32String(UnitPower(PLAYER)));
     -- MAX MANA/ENERGY/RAGE
@@ -285,6 +287,7 @@ local function RefreshQRCode()
     end
     
     lastMessage = message;
+    PrintDebug(lastMessage);
     qrRefreshCoroutine = coroutine.create(CalculateAndPrintQrCode);
 end
 
