@@ -254,7 +254,9 @@ local function GetCharacterStatus()
     characterStatus = ConcatenateStatusValue(characterStatus, IntToBase32String(UnitPowerMax(PLAYER)));
     -- GOLD
     characterStatus = ConcatenateStatusValue(characterStatus, IntToBase32String(GetMoney()));
-    
+    -- DEAD OR GHOST
+    characterStatus = ConcatenateStatusValue(characterStatus, UnitIsDeadOrGhost(PLAYER) and "1" or "0");
+
     return characterStatus;
 end
 
