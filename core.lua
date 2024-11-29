@@ -138,12 +138,13 @@ local function ConcatenateStatusValue(status, value)
     end
 end
 
-local function IntToBase32String(integer) 
-    if integer == nil or integer == 0 then
+local function IntToBase32String(integer)
+    local int = tonumber(integer); 
+    if int == nil or int == 0 then
         return "0";
     end
     local base32String = "";
-    local divisionResult = integer;
+    local divisionResult = int;
     while divisionResult > 0 do
         local modulo = divisionResult % 32;
         local digit = BASE_32_DIGITS[modulo + 1];
@@ -229,12 +230,12 @@ local function GetCharacterEquipment()
                 end
                 if permanentEnchant or randomEnchantment then
                     if permanentEnchant then
-                        itemOutputBuffer = itemOutputBuffer..CHAR_SUB_VALUE_SEPARATOR..permanentEnchant;
+                        itemOutputBuffer = itemOutputBuffer..CHAR_SUB_VALUE_SEPARATOR..IntToBase32String(permanentEnchant);
                     else
                         itemOutputBuffer = itemOutputBuffer..CHAR_SUB_VALUE_SEPARATOR;
                     end
                     if randomEnchantment then
-                        itemOutputBuffer = itemOutputBuffer..CHAR_SUB_VALUE_SEPARATOR..randomEnchantment;
+                        itemOutputBuffer = itemOutputBuffer..CHAR_SUB_VALUE_SEPARATOR..IntToBase32String(randomEnchantment);
                     end
                 end
             end
