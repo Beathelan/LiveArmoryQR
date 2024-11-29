@@ -7,11 +7,15 @@ local BLOCK_SIZE = 2
 local PLAYER = "player";
 local CHAR_FIELD_SEPARATOR = "$";
 local CHAR_VALUE_SEPARATOR = "-";
+local CHAR_SUB_VALUE_SEPARATOR = "+";
+local CHAR_WOW_API_ITEM_STRING_SEPARATOR = ":";
+local IDX_WOW_API_ITEM_STRING_PERMANENT_ENCHANT = 3;
+local IDX_WOW_API_ITEM_STRING_RANDOM_ENCHANTMENT = 8;
 local CHAR_PADDING = "%";
 local REPAINT_CD_SEC = 0.250;
 
 
-local MIN_MESSAGE_SIZE = 155;
+local MIN_MESSAGE_SIZE = 225;
 local EQUIPMENT_SLOTS = { "HEADSLOT", "NECKSLOT", "SHOULDERSLOT", "BACKSLOT", "CHESTSLOT", "SHIRTSLOT", "TABARDSLOT", "WRISTSLOT", "HANDSSLOT", "WAISTSLOT", "LEGSSLOT", "FEETSLOT", "FINGER0SLOT", "FINGER1SLOT", "TRINKET0SLOT", "TRINKET1SLOT", "MAINHANDSLOT", "SECONDARYHANDSLOT", "RANGEDSLOT"};
 local BASE_32_DIGITS = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V"};
 local CHARACTER_RACES = { NONE = 0, HUMAN = 1, NIGHTELF = 2, DWARF = 3, GNOME = 4, ORC = 5, TROLL = 6, SCOURGE = 7, TAUREN = 8 };
@@ -205,8 +209,36 @@ local function GetCharacterEquipment()
         local slotId, _ = GetInventorySlotInfo(inventorySlot);
         local equippedItemId = GetInventoryItemID(PLAYER, slotId);
         if equippedItemId ~= nil then
-            local itemIdBase32 = IntToBase32String(equippedItemId);
-            characterEquipment = characterEquipment..itemIdBase32;
+            local itemOutputBuffer = IntToBase32String(equippedItemId);
+            local equippedItemLink = GetInventoryItemLink(PLAYER, slotId);
+            if equippedItemLink then
+                local itemString, itemName = equippedItemLink:match("|H(.*)|h%[(.*)%]|h");
+                local itemStringIdx = 1;
+                local permanentEnchant;
+                local randomEnchantment;
+                for part in (itemString .. ":").gmatch(itemString, "([^:]*):") do
+                    if string.len(part) > 0 then
+                        if itemStringIdx == IDX_WOW_API_ITEM_STRING_PERMANENT_ENCHANT then
+                            permanentEnchant = part;
+                        end
+                        if itemStringIdx == IDX_WOW_API_ITEM_STRING_RANDOM_ENCHANTMENT then
+                            randomEnchantment = part;
+                        end
+                    end
+                    itemStringIdx = itemStringIdx + 1;
+                end
+                if permanentEnchant or randomEnchantment then
+                    if permanentEnchant then
+                        itemOutputBuffer = itemOutputBuffer..CHAR_SUB_VALUE_SEPARATOR..permanentEnchant;
+                    else
+                        itemOutputBuffer = itemOutputBuffer..CHAR_SUB_VALUE_SEPARATOR;
+                    end
+                    if randomEnchantment then
+                        itemOutputBuffer = itemOutputBuffer..CHAR_SUB_VALUE_SEPARATOR..randomEnchantment;
+                    end
+                end
+            end
+            characterEquipment = characterEquipment..itemOutputBuffer;
         end
     end
     return characterEquipment;
