@@ -1359,6 +1359,3 @@ if testing then
 end
 
 ADDONSELF.qrcode = qrcode
--- return {
--- 	qrcode = qrcode
--- }

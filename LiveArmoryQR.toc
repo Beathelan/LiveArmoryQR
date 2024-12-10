@@ -1,0 +1,9 @@
+## Interface: 80205
+## Title: Live Armory QR
+## Notes: Create QRCode in game Feedback farmer1992@gmail.com
+## Author: BeatByBeat
+## Version: @project-version@
+## SavedVariables: LiveArmoryQRPosition
+
+qrencode.lua
+LiveArmoryQR.lua
