@@ -63,7 +63,14 @@ local function CreateQRTip(qrsize, containerFrame)
         containerFrame:EnableMouse(true);
         containerFrame:RegisterForDrag("LeftButton") ;
         containerFrame:SetScript("OnDragStart", function(self) self:StartMoving() end);
-        containerFrame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end);
+        containerFrame:SetScript("OnDragStop", function(self)
+            self:StopMovingOrSizing()
+            local _, _, relativePoint, xOfs, yOfs = containerFrame:GetPoint()
+            DEFAULT_CHAT_FRAME:AddMessage(relativePoint)
+            DEFAULT_CHAT_FRAME:AddMessage(xOfs)
+            DEFAULT_CHAT_FRAME:AddMessage(yOfs)
+            LiveArmoryQRPosition = { anchor = relativePoint, x =  xOfs, y = yOfs };
+        end);
         containerFrame.texture = containerFrame:CreateTexture(nil, "OVERLAY");
         containerFrame.texture:SetAllPoints(containerFrame);
         containerFrame.texture:SetColorTexture(1, 1, 1);
@@ -315,7 +322,7 @@ end
 local function RefreshMainFramePosition() 
     DEFAULT_CHAT_FRAME:AddMessage("About to set position");
     mainFrame:ClearAllPoints();
-    mainFrame:SetPoint("TOPLEFT", UIParent, LiveArmoryQRPosition.x, LiveArmoryQRPosition.y);
+    mainFrame:SetPoint(LiveArmoryQRPosition.anchor, UIParent, LiveArmoryQRPosition.x, LiveArmoryQRPosition.y);
 end
 
 local function OnUpdateHandler(self, elapsed)
@@ -332,15 +339,20 @@ local function OnUpdateHandler(self, elapsed)
     end
 end
 
+local function OnDragStopHandler(self)
+
+end
+
 mainFrame = CreateFrame("Frame", nil, UIParent, BackdropTemplateMixin and "BackdropTemplate");
 mainFrame:SetScript("OnUpdate", OnUpdateHandler);
+mainFrame:RegisterEvent("ADDON_LOADED");
 mainFrame:RegisterEvent("ADDON_LOADED");
 
 mainFrame:SetScript("OnEvent", function(self, event, arg1)
     if event == "ADDON_LOADED" and arg1 == 'LiveArmoryQR' then
         DEFAULT_CHAT_FRAME:AddMessage("Config loaded");
         if LiveArmoryQRPosition == nil then
-            LiveArmoryQRPosition = { x = 0, y = 0 };
+            LiveArmoryQRPosition = { anchor = 'TOPLEFT', x = 0, y = 0 };
         end
         RefreshMainFramePosition();
     end
@@ -352,7 +364,7 @@ SlashCmdList["LAQR"] = function(cmdParam, editbox)
         debugMode = not debugMode;
         DEFAULT_CHAT_FRAME:AddMessage("LiveArmoryQR debug mode set to "..tostring(debugMode));
     else if cmdParam == "reset" then
-        LiveArmoryQRPosition = { x = 0, y = 0 };
+        LiveArmoryQRPosition = { anchor = 'TOPLEFT', x = 0, y = 0 };
         RefreshMainFramePosition();
         DEFAULT_CHAT_FRAME:AddMessage("Resetting QR position");
     end
