@@ -12,6 +12,7 @@ local IDX_WOW_API_ITEM_STRING_PERMANENT_ENCHANT = 3;
 local IDX_WOW_API_ITEM_STRING_RANDOM_ENCHANTMENT = 8;
 local CHAR_PADDING = "%";
 local REPAINT_CD_SEC = 0.250;
+local QR_BORDER_THICKNESS = 4;
 
 
 local MIN_MESSAGE_SIZE = 225;
@@ -55,6 +56,31 @@ local function CreateQRTip(qrsize, containerFrame)
         return blockFrame
     end
 
+    local function CreateBorder(self)
+        if not self.borders then
+            self.borders = {}
+            for i=1, 4 do
+                self.borders[i] = self:CreateLine(nil, "BACKGROUND", nil, 0)
+                local l = self.borders[i]
+                l:SetThickness(QR_BORDER_THICKNESS)
+                l:SetColorTexture(1, 1, 1, 1)
+                if i==1 then
+                    l:SetStartPoint("TOPLEFT", QR_BORDER_THICKNESS * -0.5, 0)
+                    l:SetEndPoint("TOPRIGHT", QR_BORDER_THICKNESS * 0.5, 0)
+                elseif i==2 then
+                    l:SetStartPoint("TOPRIGHT")
+                    l:SetEndPoint("BOTTOMRIGHT")
+                elseif i==3 then
+                    l:SetStartPoint("BOTTOMLEFT", QR_BORDER_THICKNESS * -0.5, 0)
+                    l:SetEndPoint("BOTTOMRIGHT", QR_BORDER_THICKNESS * 0.5, 0)
+                else
+                    l:SetStartPoint("BOTTOMLEFT")
+                    l:SetEndPoint("TOPLEFT")
+                end
+            end
+        end
+    end
+
     do
         containerFrame:SetFrameStrata("BACKGROUND");
         containerFrame:SetWidth(qrsize * BLOCK_SIZE);
@@ -89,8 +115,9 @@ local function CreateQRTip(qrsize, containerFrame)
     for i = 1, qrsize * qrsize do
         tinsert(containerFrame.boxes, CreateBlock(i - 1))
     end
+    
+    CreateBorder(containerFrame);
     containerFrame:Show();
-
     return containerFrame
 end
 
@@ -339,20 +366,15 @@ local function OnUpdateHandler(self, elapsed)
     end
 end
 
-local function OnDragStopHandler(self)
-
-end
-
 mainFrame = CreateFrame("Frame", nil, UIParent, BackdropTemplateMixin and "BackdropTemplate");
 mainFrame:SetScript("OnUpdate", OnUpdateHandler);
-mainFrame:RegisterEvent("ADDON_LOADED");
 mainFrame:RegisterEvent("ADDON_LOADED");
 
 mainFrame:SetScript("OnEvent", function(self, event, arg1)
     if event == "ADDON_LOADED" and arg1 == 'LiveArmoryQR' then
         DEFAULT_CHAT_FRAME:AddMessage("Config loaded");
         if LiveArmoryQRPosition == nil then
-            LiveArmoryQRPosition = { anchor = 'TOPLEFT', x = 0, y = 0 };
+            LiveArmoryQRPosition = { anchor = 'TOPLEFT', x = QR_BORDER_THICKNESS, y = QR_BORDER_THICKNESS * -1 };
         end
         RefreshMainFramePosition();
     end
@@ -363,11 +385,11 @@ SlashCmdList["LAQR"] = function(cmdParam, editbox)
     if cmdParam == "debug" then
         debugMode = not debugMode;
         DEFAULT_CHAT_FRAME:AddMessage("LiveArmoryQR debug mode set to "..tostring(debugMode));
-    else if cmdParam == "reset" then
-        LiveArmoryQRPosition = { anchor = 'TOPLEFT', x = 0, y = 0 };
+    elseif cmdParam == "reset" then
+        LiveArmoryQRPosition = { anchor = 'TOPLEFT', x = QR_BORDER_THICKNESS, y = QR_BORDER_THICKNESS * -1 };
         RefreshMainFramePosition();
         DEFAULT_CHAT_FRAME:AddMessage("Resetting QR position");
-    end
+    else
         RefreshQRCode();
     end
 end
