@@ -31,9 +31,20 @@ local lastPrintedQR = nil;
 
 local qrRefreshCoroutine = nil;
 
+local LOG_HIGHLIGHT_COLOR = "FFFFA200";
+local MESSAGE_PREFIX = '[LiveArmoryQA] ';
+
+local function HighlightForConsole(message) 
+    return "|c"..LOG_HIGHLIGHT_COLOR..message.."|r";
+end
+
+local function PrintMessage(message)
+    DEFAULT_CHAT_FRAME:AddMessage(HighlightForConsole(MESSAGE_PREFIX)..message);
+end
+
 local function PrintDebug(message)
     if debugMode then
-        DEFAULT_CHAT_FRAME:AddMessage(message);
+        PrintMessage(message);
     end
 end
 
@@ -88,14 +99,21 @@ local function CreateQRTip(qrsize, containerFrame)
         containerFrame:SetMovable(true);
         containerFrame:EnableMouse(true);
         containerFrame:RegisterForDrag("LeftButton") ;
-        containerFrame:SetScript("OnDragStart", function(self) self:StartMoving() end);
+        containerFrame:SetScript("OnDragStart", function(self) 
+            if LiveArmoryQRPosition.locked then
+                PrintMessage('QR code is locked. Use "/laqr unlock" to unlock it');
+            else
+                self:StartMoving() 
+            end
+        end);
         containerFrame:SetScript("OnDragStop", function(self)
-            self:StopMovingOrSizing()
-            local _, _, relativePoint, xOfs, yOfs = containerFrame:GetPoint()
-            DEFAULT_CHAT_FRAME:AddMessage(relativePoint)
-            DEFAULT_CHAT_FRAME:AddMessage(xOfs)
-            DEFAULT_CHAT_FRAME:AddMessage(yOfs)
-            LiveArmoryQRPosition = { anchor = relativePoint, x =  xOfs, y = yOfs };
+            if not LiveArmoryQRPosition.locked then
+                self:StopMovingOrSizing()
+                local _, _, relativePoint, xOfs, yOfs = containerFrame:GetPoint()
+                LiveArmoryQRPosition.anchor = relativePoint;
+                LiveArmoryQRPosition.x = xOfs;
+                LiveArmoryQRPosition.y = yOfs;
+            end
         end);
         containerFrame.texture = containerFrame:CreateTexture(nil, "OVERLAY");
         containerFrame.texture:SetAllPoints(containerFrame);
@@ -125,17 +143,16 @@ local function CalculateAndPrintQrCode()
     PrintDebug("Requested repaint at "..GetTime());
     local ok, qrcodeOrErrorMessage = qrcode(lastMessage, 1);
     if not ok then
-        print(qrcodeOrErrorMessage);
+        PrintDebug("Encountered an error: "..qrcodeOrErrorMessage);
     else
-        local tab = qrcodeOrErrorMessage
-        local size = #tab
-
+        local qrCodeTable = qrcodeOrErrorMessage
+        local size = #qrCodeTable
         local f = CreateQRTip(size, mainFrame)
         
-        for x = 1, #tab do
-            for y = 1, #tab do
-                if lastPrintedQR == nil or tab[x][y] ~= lastPrintedQR[x][y] then
-                    if tab[x][y] > 0 then
+        for x = 1, size do
+            for y = 1, size do
+                if lastPrintedQR == nil or qrCodeTable[x][y] ~= lastPrintedQR[x][y] then
+                    if qrCodeTable[x][y] > 0 then
                         f.SetBlack((y - 1) * size + x - 1 + 1)
                     else
                         f.SetWhite((y - 1) * size + x - 1 + 1)
@@ -143,7 +160,7 @@ local function CalculateAndPrintQrCode()
                 end
             end
         end
-        lastPrintedQR = tab;
+        lastPrintedQR = qrCodeTable;
     end
     PrintDebug("Finished repaint at "..GetTime());
     repaint = repaint + 1;
@@ -185,7 +202,7 @@ local function GetCharacterTalentsInWowheadFormat()
         local maxTier = 0;
         local maxColumn = 0;
         for talent = 1, numTalents do
-            local nameTalent, icon, tier, column, currRank, maxRank = GetTalentInfo(tabIndex, talent);
+            local _, _, tier, column, currRank, _ = GetTalentInfo(tabIndex, talent);
             if talentTree[tier] == nil then
                 talentTree[tier] = {};
             end
@@ -233,7 +250,7 @@ local function GetCharacterEquipment()
             local itemOutputBuffer = IntToBase32String(equippedItemId);
             local equippedItemLink = GetInventoryItemLink(PLAYER, slotId);
             if equippedItemLink then
-                local itemString, itemName = equippedItemLink:match("|H(.*)|h%[(.*)%]|h");
+                local itemString, _ = equippedItemLink:match("|H(.*)|h%[(.*)%]|h");
                 local itemStringIdx = 1;
                 local permanentEnchant;
                 local randomEnchantment;
@@ -347,7 +364,6 @@ local function RefreshQRCode()
 end
 
 local function RefreshMainFramePosition() 
-    DEFAULT_CHAT_FRAME:AddMessage("About to set position");
     mainFrame:ClearAllPoints();
     mainFrame:SetPoint(LiveArmoryQRPosition.anchor, UIParent, LiveArmoryQRPosition.x, LiveArmoryQRPosition.y);
 end
@@ -372,26 +388,41 @@ mainFrame:RegisterEvent("ADDON_LOADED");
 
 mainFrame:SetScript("OnEvent", function(self, event, arg1)
     if event == "ADDON_LOADED" and arg1 == 'LiveArmoryQR' then
-        DEFAULT_CHAT_FRAME:AddMessage("Config loaded");
         if LiveArmoryQRPosition == nil then
-            LiveArmoryQRPosition = { anchor = 'TOPLEFT', x = QR_BORDER_THICKNESS, y = QR_BORDER_THICKNESS * -1 };
+            LiveArmoryQRPosition = { anchor = 'TOPLEFT', x = QR_BORDER_THICKNESS, y = QR_BORDER_THICKNESS * -1, locked = false };
         end
         RefreshMainFramePosition();
     end
 end)
 
-
 SlashCmdList["LAQR"] = function(cmdParam, editbox)
     if cmdParam == "debug" then
         debugMode = not debugMode;
-        DEFAULT_CHAT_FRAME:AddMessage("LiveArmoryQR debug mode set to "..tostring(debugMode));
+        PrintMessage("Debug mode set to "..tostring(debugMode));
     elseif cmdParam == "reset" then
-        LiveArmoryQRPosition = { anchor = 'TOPLEFT', x = QR_BORDER_THICKNESS, y = QR_BORDER_THICKNESS * -1 };
+        LiveArmoryQRPosition.anchor = 'TOPLEFT';
+        LiveArmoryQRPosition.x = QR_BORDER_THICKNESS - 1;
+        LiveArmoryQRPosition.y = (QR_BORDER_THICKNESS - 1)* -1;
+        LiveArmoryQRPosition.locked = false;
         RefreshMainFramePosition();
-        DEFAULT_CHAT_FRAME:AddMessage("Resetting QR position");
-    else
+        PrintMessage("QR code unlocked and position reset ");
+    elseif cmdParam == "refresh" then
         RefreshQRCode();
+    elseif cmdParam == "lock" then
+        LiveArmoryQRPosition.locked = true;
+        PrintMessage("QR code locked");
+    elseif cmdParam == "unlock" then
+        LiveArmoryQRPosition.locked = false;
+        PrintMessage("QR code unlocked");
+    else
+        PrintMessage("Usage:");
+        PrintMessage(" - "..HighlightForConsole("/laqr reset")..": Resets the QR code to the top-left corner and unlocks it");
+        PrintMessage(" - "..HighlightForConsole("/laqr refresh")..": Refreshes the QR code immediately");
+        PrintMessage(" - "..HighlightForConsole("/laqr lock")..": Prevents the QR code from being dragged around");
+        PrintMessage(" - "..HighlightForConsole("/laqr unlock")..": Allows the QR code to be dragged around");  
     end
 end
 
 SLASH_LAQR1 = "/laqr"
+
+PrintMessage("Initialized. Try /laqr to see what I can do");

@@ -1,8 +1,10 @@
-## Interface: 80205
+## Interface: 11501
 ## Title: Live Armory QR
-## Notes: Create QRCode in game Feedback farmer1992@gmail.com
-## Author: BeatByBeat
-## Version: @project-version@
+## Notes: An indispensable companion addon for the WoW Classic Live Armory Twitch extension
+## Author: BeatByBeat a.k.a. Beathelan
+## Version: 1.0.0
+## RequiredDeps:
+## X-Curse-Project-ID: 999999
 ## SavedVariables: LiveArmoryQRPosition
 
 qrencode.lua
