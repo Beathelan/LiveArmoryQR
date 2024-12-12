@@ -19,6 +19,23 @@ No other data is collected, such as your character's name, friends, chat log, pa
 
 The QR code is repainted up to 4 times per second, as long as the status of the character changes.
 
+## Installation
+
+### Manual
+
+Just like old times!
+
+1. Browse to the [latest release page](https://github.com/Beathelan/LiveArmoryQR/releases/latest) 
+2. Download `LiveArmoryQR.zip`
+3. Extract the contents of the ZIP file into the `Addons` folder of your WoW Classic installation, e.g.
+```
+C:\Program Files (x86)\World of Warcraft\_classic_era_\Interface\AddOns
+```
+
+### CurseForge
+
+Coming soon! Currently waiting for approval by Curse reviewers.
+
 ## Usage
 
 On first load, the QR code will appear on the top-left corner of your screen. You can then dragg it to any position convenient to you. In order to ensure the extension can locate and read the QR consistently, please ensure that the QR code does not end up permanently obscured by other elements of your WoW UI (short-term obstructions such as the map or Auction House windows are okay).
