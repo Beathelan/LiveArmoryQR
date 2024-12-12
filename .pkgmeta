@@ -1,4 +1,4 @@
-package-as: qrcode-wow
-enable-nolib-creation: false
+package-as: LiveArmoryQA
+enable-nolib-creation: no
 ignore:
-  - README.markdown
+  - README.md
