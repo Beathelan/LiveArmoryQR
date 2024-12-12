@@ -1,4 +1,4 @@
-## Interface: 11501
+## Interface: 11505
 ## Title: Live Armory QR
 ## Notes: An indispensable companion addon for the WoW Classic Live Armory Twitch extension
 ## Author: BeatByBeat a.k.a. Beathelan
