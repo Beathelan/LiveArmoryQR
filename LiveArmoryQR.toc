@@ -5,6 +5,7 @@
 ## Version: 1.0.0
 ## RequiredDeps:
 ## X-Curse-Project-ID: 999999
+## X-License: BSD-3-Clause
 ## SavedVariables: LiveArmoryQRPosition
 
 qrencode.lua
