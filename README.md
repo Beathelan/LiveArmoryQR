@@ -5,15 +5,15 @@ An indispensable companion addon for the [WoW Classic Live Armory Twitch extensi
 Automatically generates a QR code on-screen which contains information about your WoW Classic character for use by the extension via computer vision.
 
 The following data about your character is captured live as you play and stored in the QR code:
-* Race
-* Class
-* Level
-* Current and max HP
-* Current and max "Power" (one of: Mana, Rage, Energy, Focus)
-* Equipped items, including any applied enchants (but not including SOD runes)
-* Talent selections
-* Gold on hand
-* Whether the character is dead or is in ghost form
+- Race
+- Class
+- Level
+- Current and max HP
+- Current and max "Power" (one of: Mana, Rage, Energy, Focus)
+- Equipped items, including any applied enchants (but not including SOD runes)
+- Talent selections
+- Gold on hand
+- Whether the character is dead or is in ghost form
 
 No other data is collected, such as your character's name, friends, chat log, party members or anything else not explicitly listed above. More data may be collected in the future in order to support additional functionality for the extension, in which case the list provided will be diligently updated.
 
@@ -27,11 +27,11 @@ The addon will automatically record the last position of the QR code and restore
 
 The following commands are available:
 
-`/laqr lock`: prevents the QR code from being dragged around.
-`/laqr unlock`: allows the QR code to be dragged around.
-`/laqr reset`: resets the position of the QR code to the top-left corner and unlocks it.
-`/laqr refresh`: causes the QR code to repaint on the next possible frame (normally, the QR repaints every 250 ms).
-`/laqr debug`: toggles DEBUG mode on or off. While on DEBUG mode, the addon will print information to the chat log which probably will look like nonsense to you but it's helpful to the authors.
+- `/laqr lock`: prevents the QR code from being dragged around.
+- `/laqr unlock`: allows the QR code to be dragged around.
+- `/laqr reset`: resets the position of the QR code to the top-left corner and unlocks it.
+- `/laqr refresh`: causes the QR code to repaint on the next possible frame (normally, the QR repaints every 250 ms).
+- `/laqr debug`: toggles DEBUG mode on or off. While on DEBUG mode, the addon will print information to the chat log which probably will look like nonsense to you but it's helpful to the authors.
 
 ## Special Thanks
 
