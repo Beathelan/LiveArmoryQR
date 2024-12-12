@@ -2,7 +2,7 @@
 ## Title: Live Armory QR
 ## Notes: An indispensable companion addon for the WoW Classic Live Armory Twitch extension
 ## Author: BeatByBeat a.k.a. Beathelan
-## Version: 1.0.0
+## Version: @project-version@
 ## RequiredDeps:
 ## X-Curse-Project-ID: 1157802
 ## X-License: BSD-3-Clause
