@@ -19,7 +19,7 @@ No other data is collected, such as your character's name, friends, chat log, pa
 
 The QR code is repainted up to 4 times per second, as long as the status of the character changes.
 
-![Screenshot of the addon in action](https://drive.google.com/u/0/drive-viewer/AKGpihaWkPmRk_ITauMlnWtOMGS3OcEAVVolyArcHebbzEiFT5uz5sDCfq3pHLSQWFL3qO554_Lx2GD1RJ8TtV3urwUuk9cbQqmC6g=s2560)
+![Screenshot of the addon in action](/repo-resources/ScreenshotLiveQR.png)
 
 ## Installation
 
