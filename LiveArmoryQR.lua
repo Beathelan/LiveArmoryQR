@@ -32,7 +32,7 @@ local lastPrintedQR = nil;
 local qrRefreshCoroutine = nil;
 
 local LOG_HIGHLIGHT_COLOR = "FFFFA200";
-local MESSAGE_PREFIX = '[LiveArmoryQA] ';
+local MESSAGE_PREFIX = '[LiveArmoryQR] ';
 
 local function HighlightForConsole(message) 
     return "|c"..LOG_HIGHLIGHT_COLOR..message.."|r";

@@ -23,6 +23,13 @@ The QR code is repainted up to 4 times per second, as long as the status of the 
 
 ## Installation
 
+### CurseForge
+
+1. Browse to the [CurseForge project page](https://www.curseforge.com/wow/addons/livearmoryqr)
+2. Press `Install` and complete the process on your CurseForge app as usual.
+
+Note: if you're trying to find the addon from the CurseForge app's "Browse" tab, it will not come up in the search results. We're working with their support team to address this. Apologies about the inconvenience!
+
 ### Manual
 
 Just like old times!
@@ -33,10 +40,6 @@ Just like old times!
 ```
 C:\Program Files (x86)\World of Warcraft\_classic_era_\Interface\AddOns
 ```
-
-### CurseForge
-
-Coming soon! Currently waiting for approval by Curse reviewers.
 
 ## Usage
 
