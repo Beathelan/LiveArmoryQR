@@ -1,4 +1,4 @@
-package-as: LiveArmoryQA
+package-as: LiveArmoryQR
 enable-nolib-creation: no
 ignore:
   - README.md

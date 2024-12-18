@@ -61,8 +61,8 @@ The following commands are available:
 
 ## Special Thanks
 
-* LiveArmoryQA was inspired by and started as a fork of [qrcode-wow](https://github.com/tg123/qrcode-wow). Thank you [tg123](https://github.com/tg123) for making this possible!
-* LiveArmoryQA uses [luaqrcode](https://github.com/speedata/luaqrcode) as its backbone for computing the QR Code, with very minor modifications so that the workload can be distributed between multiple frames in the context of a WoW addon.
+* LiveArmoryQR was inspired by and started as a fork of [qrcode-wow](https://github.com/tg123/qrcode-wow). Thank you [tg123](https://github.com/tg123) for making this possible!
+* LiveArmoryQR uses [luaqrcode](https://github.com/speedata/luaqrcode) as its backbone for computing the QR Code, with very minor modifications so that the workload can be distributed between multiple frames in the context of a WoW addon.
 
 ## QR code message format
 
